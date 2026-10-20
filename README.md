@@ -845,7 +845,7 @@ Se ejecutaron ambos scripts sobre PostgreSQL 16 (simulando `anon`, `authenticate
 | `rol_app` borra reservas | Rechazado | Revisado |
 | `rol_app` modifica `audit_log` | Rechazado | Revisado |
 | `rol_app` reemplaza horario (`DELETE`) | Permitido | Revisado |
-| `rol_admin` borra de `audit_log` | Rechazado | ✔ |
+| `rol_admin` borra de `audit_log` | Rechazado | Revisado |
 | `rol_auditor` lee `audit_log` pero no `bookings` | Permitido / rechazado | Revisado |
 | `anon` lee `servicios` | Rechazado | Revisado |
 | `authenticated` lee `bookings` (4 reservas en total) | Cliente dueño: 4 · profesional sin reservas: 0 | Revisado |
