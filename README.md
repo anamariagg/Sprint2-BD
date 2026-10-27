@@ -14,6 +14,7 @@ Bookly permite que clientes reserven servicios con profesionales de negocios com
 | `security.sql` | Roles y privilegios (`CREATE ROLE`, `GRANT`, `REVOKE`) |
 | `security_rls.sql` | Row Level Security y políticas (solo Supabase) |
 | `docs/analisis-almacenamiento.md` | Almacenamiento e índices, costo de una consulta y optimización algebraica |
+| `evidencias/` | `datos_prueba.sql` (datos de demostración) y capturas de la ejecución de `schema.sql` y de las 27 consultas |
 
 ## Cómo ejecutar los scripts
 
@@ -22,6 +23,7 @@ Sobre una base PostgreSQL o Supabase **vacía**, en este orden:
 1. `schema.sql`: crea las 11 tablas en orden de dependencias (requiere la extensión `btree_gist`, que Supabase incluye).
 2. `security.sql`: crea los roles y asigna los privilegios.
 3. `security_rls.sql`: activa RLS. **Solo en Supabase**, porque usa `auth.uid()` y los roles `anon` y `authenticated`.
+4. `evidencias/datos_prueba.sql` (opcional): carga datos de demostración para probar las consultas. Usar solo en una base de prueba.
 
 ## Tabla de contenido
 
@@ -196,11 +198,11 @@ Cuentas de la plataforma (hub central). El rol distingue CUSTOMER, PROFESSIONAL 
 | `password_hash` | VARCHAR(255) | NOT NULL | — |
 | `full_name` | VARCHAR(150) | NOT NULL | — |
 | `role` | VARCHAR(30) | NOT NULL | — |
-| `enabled` | BOOLEAN | NOT NULL | `true` |
+| `enabled` | BOOLEAN | NOT NULL | — |
 | `failed_login_attempts` | INTEGER | NOT NULL | `0` |
 | `locked_until` | TIMESTAMPTZ | NULL | — |
-| `created_at` | TIMESTAMPTZ | NOT NULL | `now()` |
-| `updated_at` | TIMESTAMPTZ | NOT NULL | `now()` |
+| `created_at` | TIMESTAMPTZ | NOT NULL | — |
+| `updated_at` | TIMESTAMPTZ | NOT NULL | — |
 | `mfa_enabled` | BOOLEAN | NOT NULL | `false` |
 | `mfa_secret_encrypted` | VARCHAR(512) | NULL | — |
 
@@ -218,9 +220,9 @@ Configuración única de la plataforma (HU-20). Un índice sobre la expresión c
 | Columna | Tipo | Nulo | Valor por defecto |
 |---|---|---|---|
 | `id` | UUID | NOT NULL | — |
-| `name` | VARCHAR(150) | NOT NULL | — |
+| `name` | VARCHAR(200) | NOT NULL | — |
 | `status` | VARCHAR(20) | NOT NULL | — |
-| `created_at` | TIMESTAMPTZ | NOT NULL | `now()` |
+| `created_at` | TIMESTAMPTZ | NOT NULL | — |
 
 **Restricciones**
 
@@ -244,8 +246,8 @@ Catálogo de servicios (HU-02, HU-06).
 | `duracion_minutos` | INTEGER | NOT NULL | — |
 | `precio` | NUMERIC(12,2) | NOT NULL | — |
 | `estado` | VARCHAR(20) | NOT NULL | — |
-| `created_at` | TIMESTAMPTZ | NOT NULL | `now()` |
-| `updated_at` | TIMESTAMPTZ | NOT NULL | `now()` |
+| `created_at` | TIMESTAMPTZ | NOT NULL | — |
+| `updated_at` | TIMESTAMPTZ | NOT NULL | — |
 
 **Restricciones**
 
@@ -266,14 +268,15 @@ Perfil que extiende a `app_user` (relación 1:0..1). Comparte la clave primaria 
 |---|---|---|---|
 | `id` | UUID | NOT NULL | — |
 | `rol` | VARCHAR(30) | NOT NULL | `'PROFESSIONAL'` |
-| `especialidad` | VARCHAR(150) | NOT NULL | — |
-| `created_at` | TIMESTAMPTZ | NOT NULL | `now()` |
-| `updated_at` | TIMESTAMPTZ | NOT NULL | `now()` |
+| `especialidad` | VARCHAR(100) | NOT NULL | — |
+| `created_at` | TIMESTAMPTZ | NOT NULL | — |
+| `updated_at` | TIMESTAMPTZ | NOT NULL | — |
 
 **Restricciones**
 
 - **PK** `pk_profesionales`: `PRIMARY KEY (id)`
-- **FK** `fk_profesionales_app_user`: `FOREIGN KEY (id, rol) REFERENCES app_user(id, role)`
+- **FK** `fk_profesionales_app_user_rol`: `FOREIGN KEY (id, rol) REFERENCES app_user(id, role)`
+- **CHECK** `ck_profesionales_especialidad`: `CHECK (length(btrim(especialidad)) > 0)`
 - **CHECK** `ck_profesionales_rol`: `CHECK (rol = 'PROFESSIONAL')`
 
 ### `horario_semanal`
@@ -492,53 +495,127 @@ El modelo cumple como mínimo la tercera forma normal: en cada tabla todos los a
 
 ## Consultas SQL
 
-Todas las consultas se ejecutan sobre las tablas de `schema.sql`. Cada una indica la pregunta de negocio que responde, la historia de usuario (HU) relacionada y el tipo de operación que usa. Los valores entre comillas (UUID, fechas, nombres) son parámetros de ejemplo que se reemplazan en la aplicación.
+Las 27 consultas se ejecutan sobre las tablas de `schema.sql`. Cada una indica la pregunta de negocio que responde, la historia de usuario (HU) relacionada y el tipo de operación que usa. Los valores entre comillas (UUID, fechas, nombres) son parámetros de ejemplo que se reemplazan en la aplicación.
 
 ### Preguntas clave del Sprint 1
 
-**S1-1. ¿Qué servicios activos duran más de 60 minutos?** (HU-02, HU-06) · Filtro + ordenamiento
+Son las 12 preguntas de negocio definidas por el equipo en el Sprint 1 (HU-01, HU-02, HU-03, HU-06, HU-20 y HU-22).
+
+**S1-1. ¿Existe una cuenta con un correo determinado?** (HU-01, HU-03) · Filtro
 
 ```sql
-SELECT nombre, categoria, duracion_minutos, precio
-FROM servicios
-WHERE estado = 'ACTIVO' AND duracion_minutos > 60
-ORDER BY duracion_minutos DESC;
+SELECT id, email, enabled
+FROM app_user
+WHERE email = LOWER('juan@example.com');
 ```
 
-**S1-2. ¿Qué profesionales tienen una especialidad dada?** (HU-22) · Filtro
+**S1-2. ¿Cuántas cuentas existen por rol?** (HU-01) · Agregación
 
 ```sql
-SELECT id, especialidad
-FROM profesionales
-WHERE lower(especialidad) = lower('Fisioterapia');
-```
-
-**S1-3. ¿Cuántas cuentas hay por rol?** (HU-01) · Agregación
-
-```sql
-SELECT role, COUNT(*) AS cantidad
+SELECT role, COUNT(*) AS total
 FROM app_user
 GROUP BY role
 ORDER BY role;
 ```
 
-**S1-4. ¿Cuáles son los datos de cuenta y especialidad de cada profesional?** (HU-22) · Join
+**S1-3. ¿Qué cuentas están bloqueadas actualmente?** (HU-03) · Filtro + ordenamiento
 
 ```sql
-SELECT u.id, u.full_name, u.email, p.especialidad
-FROM app_user AS u
-JOIN profesionales AS p ON p.id = u.id
-WHERE u.role = 'PROFESSIONAL';
+SELECT email, failed_login_attempts, locked_until
+FROM app_user
+WHERE locked_until IS NOT NULL
+  AND locked_until > CURRENT_TIMESTAMP
+ORDER BY locked_until;
 ```
 
-**S1-5. ¿Cuál es el precio promedio de los servicios activos por categoría?** (HU-02) · Agregación + filtro
+**S1-4. ¿Qué cuentas acumulan más intentos fallidos?** (HU-03) · Filtro + ordenamiento
 
 ```sql
-SELECT categoria, ROUND(AVG(precio), 2) AS precio_promedio
+SELECT email, failed_login_attempts, locked_until
+FROM app_user
+WHERE failed_login_attempts > 0
+ORDER BY failed_login_attempts DESC, email;
+```
+
+**S1-5. ¿Cuántas cuentas se registraron por día?** (HU-01) · Agregación
+
+```sql
+SELECT created_at::date AS registration_date, COUNT(*) AS total
+FROM app_user
+GROUP BY created_at::date
+ORDER BY registration_date DESC;
+```
+
+**S1-6. ¿Qué porcentaje de cuentas está habilitado?** (HU-01) · Agregación con `FILTER`
+
+```sql
+SELECT ROUND(100.0 * COUNT(*) FILTER (WHERE enabled) / NULLIF(COUNT(*), 0), 2)
+       AS enabled_percentage
+FROM app_user;
+```
+
+**S1-7. ¿Qué servicios activos existen por categoría?** (HU-02) · Filtro + agregación
+
+```sql
+SELECT categoria, COUNT(*) AS total_servicios
 FROM servicios
 WHERE estado = 'ACTIVO'
 GROUP BY categoria
 ORDER BY categoria;
+```
+
+**S1-8. ¿Qué servicios requieren más tiempo de atención?** (HU-02, HU-06) · Filtro + ordenamiento
+
+```sql
+SELECT nombre, categoria, duracion_minutos, precio
+FROM servicios
+WHERE estado = 'ACTIVO'
+ORDER BY duracion_minutos DESC, nombre;
+```
+
+**S1-9. ¿Cuántos profesionales hay por especialidad?** (HU-22) · Agregación
+
+```sql
+SELECT especialidad, COUNT(*) AS total_profesionales
+FROM profesionales
+GROUP BY especialidad
+ORDER BY total_profesionales DESC, especialidad;
+```
+
+**S1-10. ¿Qué profesionales están habilitados y con qué especialidad?** (HU-22) · Join + filtro
+
+```sql
+SELECT u.id, u.full_name, u.email, p.especialidad
+FROM profesionales p
+JOIN app_user u ON u.id = p.id
+WHERE u.enabled
+ORDER BY p.especialidad, u.full_name;
+```
+
+**S1-11. ¿Qué especialidades no tienen ningún servicio activo en el catálogo?** (HU-02, HU-22) · Subconsulta `NOT EXISTS`
+
+```sql
+SELECT DISTINCT p.especialidad
+FROM profesionales p
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM servicios s
+    WHERE s.estado = 'ACTIVO'
+      AND lower(s.categoria) = lower(p.especialidad)
+)
+ORDER BY p.especialidad;
+```
+
+**S1-12. Consistencia: ¿hay cuentas `PROFESSIONAL` sin perfil?** (HU-22) · `LEFT JOIN` + `IS NULL`
+
+Con datos consistentes debe devolver 0 filas. La base impide el caso contrario (un perfil sobre una cuenta que no es `PROFESSIONAL`), pero no que una cuenta con ese rol exista sin perfil.
+
+```sql
+SELECT u.id, u.email
+FROM app_user u
+LEFT JOIN profesionales p ON p.id = u.id
+WHERE u.role = 'PROFESSIONAL'
+  AND p.id IS NULL;
 ```
 
 ### Preguntas clave del Sprint 2
@@ -702,13 +779,162 @@ LEFT JOIN horario_semanal h ON h.profesional_id = p.id
 WHERE h.id IS NULL;
 ```
 
+**S2-14. ¿Qué notificaciones generó una reserva?** (HU-10) · Filtro + ordenamiento
+
+```sql
+SELECT event_type, status, attempts, created_at, sent_at, error_message
+FROM notification_delivery
+WHERE booking_id = '00000000-0000-0000-0000-0000000000b1'
+ORDER BY created_at DESC;
+```
+
+**S2-15. ¿Cuántas entregas hay por tipo de evento y estado?** (HU-10) · Agregación
+
+```sql
+SELECT event_type, status, COUNT(*) AS total
+FROM notification_delivery
+GROUP BY event_type, status
+ORDER BY event_type, status;
+```
+
 ### Cobertura de la rúbrica
 
 | Requisito | Consultas |
 |---|---|
-| Filtros | S1-1, S1-2, S2-1, S2-11 |
-| Agregaciones | S1-3, S1-5, S2-5, S2-6, S2-7, S2-10, S2-12 |
-| Joins | S1-4, S2-2, S2-3, S2-4, S2-6, S2-7, S2-8, S2-9, S2-12, S2-13 |
+| Filtros | S1-1, S1-3, S1-4, S1-8, S2-1, S2-11, S2-14 |
+| Agregaciones | S1-2, S1-5, S1-6, S1-7, S1-9, S2-5, S2-6, S2-7, S2-10, S2-12, S2-15 |
+| Joins | S1-10, S1-11, S1-12, S2-2, S2-3, S2-4, S2-6, S2-7, S2-8, S2-9, S2-12, S2-13 |
+
+Total: **27 consultas** (12 del Sprint 1 y 15 del Sprint 2).
+
+### Evidencias de ejecución
+
+Las consultas se probaron sobre una base creada con `schema.sql` y cargada con datos de demostración (`evidencias/datos_prueba.sql`). Cada captura muestra la consulta y el resultado que devolvió. Los archivos están en la carpeta [`evidencias/`](evidencias/).
+
+#### Creación del esquema
+
+`schema.sql` se ejecutó sobre una base vacía y creó las 11 tablas.
+
+```sql
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
+ORDER BY table_name;
+```
+
+<img src="evidencias/00-tablas-creadas.png" alt="Evidencia: tablas creadas por schema.sql" width="800">
+
+#### Consultas del Sprint 1
+
+**S1-1.** ¿Existe una cuenta con un correo determinado?
+
+<img src="evidencias/S1-01.png" alt="Evidencia S1-1" width="800">
+
+**S1-2.** ¿Cuántas cuentas existen por rol?
+
+<img src="evidencias/S1-02.png" alt="Evidencia S1-2" width="800">
+
+**S1-3.** ¿Qué cuentas están bloqueadas actualmente?
+
+<img src="evidencias/S1-03.png" alt="Evidencia S1-3" width="800">
+
+**S1-4.** ¿Qué cuentas acumulan más intentos fallidos?
+
+<img src="evidencias/S1-04.png" alt="Evidencia S1-4" width="800">
+
+**S1-5.** ¿Cuántas cuentas se registraron por día?
+
+<img src="evidencias/S1-05.png" alt="Evidencia S1-5" width="800">
+
+**S1-6.** ¿Qué porcentaje de cuentas está habilitado?
+
+<img src="evidencias/S1-06.png" alt="Evidencia S1-6" width="800">
+
+**S1-7.** ¿Qué servicios activos existen por categoría?
+
+<img src="evidencias/S1-07.png" alt="Evidencia S1-7" width="800">
+
+**S1-8.** ¿Qué servicios requieren más tiempo de atención?
+
+<img src="evidencias/S1-08.png" alt="Evidencia S1-8" width="800">
+
+**S1-9.** ¿Cuántos profesionales hay por especialidad?
+
+<img src="evidencias/S1-09.png" alt="Evidencia S1-9" width="800">
+
+**S1-10.** ¿Qué profesionales están habilitados y con qué especialidad?
+
+<img src="evidencias/S1-10.png" alt="Evidencia S1-10" width="800">
+
+**S1-11.** ¿Qué especialidades no tienen ningún servicio activo en el catálogo?
+
+<img src="evidencias/S1-11.png" alt="Evidencia S1-11" width="800">
+
+**S1-12.** Consistencia: ¿hay cuentas `PROFESSIONAL` sin perfil?
+
+<img src="evidencias/S1-12.png" alt="Evidencia S1-12" width="800">
+
+#### Consultas del Sprint 2
+
+**S2-1.** ¿Cuál es el horario semanal de un profesional?
+
+<img src="evidencias/S2-01.png" alt="Evidencia S2-1" width="800">
+
+**S2-2.** ¿Qué servicios activos ofrece un profesional?
+
+<img src="evidencias/S2-02.png" alt="Evidencia S2-2" width="800">
+
+**S2-3.** ¿Qué franjas libres tiene un profesional para un servicio en una fecha?
+
+<img src="evidencias/S2-03.png" alt="Evidencia S2-3" width="800">
+
+**S2-4.** ¿Qué reservas confirmadas tiene un cliente?
+
+<img src="evidencias/S2-04.png" alt="Evidencia S2-4" width="800">
+
+**S2-5.** ¿Cuántas reservas hay por estado?
+
+<img src="evidencias/S2-05.png" alt="Evidencia S2-5" width="800">
+
+**S2-6.** ¿Qué profesionales acumulan cancelaciones desde una fecha?
+
+<img src="evidencias/S2-06.png" alt="Evidencia S2-6" width="800">
+
+**S2-7.** ¿Cuántas reservas completadas e ingresos genera cada servicio?
+
+<img src="evidencias/S2-07.png" alt="Evidencia S2-7" width="800">
+
+**S2-8.** ¿Qué correos de notificación están pendientes o fallaron?
+
+<img src="evidencias/S2-08.png" alt="Evidencia S2-8" width="800">
+
+**S2-9.** ¿Qué acciones críticas se registraron en un rango de fechas y quién las hizo?
+
+<img src="evidencias/S2-09.png" alt="Evidencia S2-9" width="800">
+
+**S2-10.** ¿Cuántas veces ocurrió cada tipo de acción en la bitácora?
+
+<img src="evidencias/S2-10.png" alt="Evidencia S2-10" width="800">
+
+**S2-11.** ¿Qué administradores aún no tienen MFA activo?
+
+<img src="evidencias/S2-11.png" alt="Evidencia S2-11" width="800">
+
+**S2-12.** ¿Cuántos códigos de recuperación sin usar tiene cada administrador?
+
+<img src="evidencias/S2-12.png" alt="Evidencia S2-12" width="800">
+
+**S2-13.** ¿Qué profesionales no han configurado su horario?
+
+<img src="evidencias/S2-13.png" alt="Evidencia S2-13" width="800">
+
+**S2-14.** ¿Qué notificaciones generó una reserva?
+
+<img src="evidencias/S2-14.png" alt="Evidencia S2-14" width="800">
+
+**S2-15.** ¿Cuántas entregas hay por tipo de evento y estado?
+
+<img src="evidencias/S2-15.png" alt="Evidencia S2-15" width="800">
 
 ---
 
@@ -838,18 +1064,18 @@ Se ejecutaron ambos scripts sobre PostgreSQL 16 (simulando `anon`, `authenticate
 
 | Prueba | Resultado esperado | Resultado |
 |---|---|---|
-| `rol_lectura` lee `bookings` | Permitido | Revisado |
-| `rol_lectura` lee `password_hash` | Rechazado | Revisado|
-| `rol_lectura` borra reservas | Rechazado | Revisado |
-| `rol_lectura` lee `audit_log` | Rechazado | Revisado |
-| `rol_app` borra reservas | Rechazado | Revisado |
-| `rol_app` modifica `audit_log` | Rechazado | Revisado |
-| `rol_app` reemplaza horario (`DELETE`) | Permitido | Revisado |
-| `rol_admin` borra de `audit_log` | Rechazado | Revisado |
-| `rol_auditor` lee `audit_log` pero no `bookings` | Permitido / rechazado | Revisado |
-| `anon` lee `servicios` | Rechazado | Revisado |
-| `authenticated` lee `bookings` (4 reservas en total) | Cliente dueño: 4 · profesional sin reservas: 0 | Revisado |
-| `authenticated` lee `password_hash` o `audit_log` | Rechazado | Revisado |
+| `rol_lectura` lee `bookings` | Permitido | ✔ |
+| `rol_lectura` lee `password_hash` | Rechazado | ✔ |
+| `rol_lectura` borra reservas | Rechazado | ✔ |
+| `rol_lectura` lee `audit_log` | Rechazado | ✔ |
+| `rol_app` borra reservas | Rechazado | ✔ |
+| `rol_app` modifica `audit_log` | Rechazado | ✔ |
+| `rol_app` reemplaza horario (`DELETE`) | Permitido | ✔ |
+| `rol_admin` borra de `audit_log` | Rechazado | ✔ |
+| `rol_auditor` lee `audit_log` pero no `bookings` | Permitido / rechazado | ✔ |
+| `anon` lee `servicios` | Rechazado | ✔ |
+| `authenticated` lee `bookings` (3 reservas en total) | Cliente dueño: 3 · profesional sin reservas: 0 | ✔ |
+| `authenticated` lee `password_hash` o `audit_log` | Rechazado | ✔ |
 
 ---
 
