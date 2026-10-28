@@ -3,14 +3,15 @@
 -- schema.sql: estado consolidado del esquema (Sprint 1 + migraciones
 -- Flyway V10 y V30-V46 del Sprint 2). Ejecutar sobre PostgreSQL 16 /
 -- Supabase VACÍO. Las tablas van en orden de dependencias.
--- Las líneas marcadas "SPRINT1-ASUNCIÓN" corresponden a la parte del
--- Sprint 1 que aún debe contrastarse con schema_sprint1.sql.
+-- Fuente: README_BASE_DE_DATOS.md del equipo (Sprint 1) y migraciones del
+-- Sprint 2. Las líneas marcadas "VERIFICAR" son longitudes que ese README
+-- no documenta; comprobarlas contra V3 y V5.
 -- =====================================================================
 
 CREATE EXTENSION IF NOT EXISTS btree_gist;   -- V46 (restricción EXCLUDE)
 
 -- ---------------------------------------------------------------------
--- 1. app_user (Sprint 1 + V41: columnas MFA)
+-- 1. app_user (Sprint 1: V1, V2, V4, V6 + V41: columnas MFA)
 -- ---------------------------------------------------------------------
 CREATE TABLE app_user (
     id                    UUID         NOT NULL,
@@ -18,67 +19,73 @@ CREATE TABLE app_user (
     password_hash         VARCHAR(255) NOT NULL,
     full_name             VARCHAR(150) NOT NULL,
     role                  VARCHAR(30)  NOT NULL,
-    enabled               BOOLEAN      NOT NULL DEFAULT TRUE,          -- SPRINT1-ASUNCIÓN
-    failed_login_attempts INTEGER      NOT NULL DEFAULT 0,             -- SPRINT1-ASUNCIÓN
+    enabled               BOOLEAN      NOT NULL,   -- la aplicación envía TRUE al registrar
+    failed_login_attempts INTEGER      NOT NULL DEFAULT 0,
     locked_until          TIMESTAMPTZ,
-    created_at            TIMESTAMPTZ  NOT NULL DEFAULT now(),         -- SPRINT1-ASUNCIÓN
-    updated_at            TIMESTAMPTZ  NOT NULL DEFAULT now(),         -- SPRINT1-ASUNCIÓN
-    mfa_enabled           BOOLEAN      NOT NULL DEFAULT FALSE,         -- V41
-    mfa_secret_encrypted  VARCHAR(512),                                -- V41
+    created_at            TIMESTAMPTZ  NOT NULL,
+    updated_at            TIMESTAMPTZ  NOT NULL,
+    mfa_enabled           BOOLEAN      NOT NULL DEFAULT FALSE,   -- V41
+    mfa_secret_encrypted  VARCHAR(512),                          -- V41
     CONSTRAINT pk_app_user PRIMARY KEY (id),
     CONSTRAINT uk_app_user_email UNIQUE (email),
     CONSTRAINT ck_app_user_role
         CHECK (role IN ('CUSTOMER', 'PROFESSIONAL', 'ADMIN')),
-    -- Restricción auxiliar para la FK compuesta de profesionales
+    -- Restricción auxiliar (V6): exigida por PostgreSQL para la FK compuesta
+    -- de profesionales hacia (id, role)
     CONSTRAINT uk_app_user_id_role UNIQUE (id, role)
 );
 
 -- ---------------------------------------------------------------------
--- 2. platform (Sprint 1): configuración única
+-- 2. platform (Sprint 1: V3): configuración única de la plataforma
 -- ---------------------------------------------------------------------
 CREATE TABLE platform (
     id         UUID         NOT NULL,
-    name       VARCHAR(150) NOT NULL,                                  -- SPRINT1-ASUNCIÓN
-    status     VARCHAR(20)  NOT NULL,                                  -- SPRINT1-ASUNCIÓN
-    created_at TIMESTAMPTZ  NOT NULL DEFAULT now(),                    -- SPRINT1-ASUNCIÓN
+    name       VARCHAR(200) NOT NULL,
+    status     VARCHAR(20)  NOT NULL,                                  -- VERIFICAR longitud en V3
+    created_at TIMESTAMPTZ  NOT NULL,
     CONSTRAINT pk_platform PRIMARY KEY (id),
     CONSTRAINT ck_platform_status CHECK (status IN ('ACTIVE', 'SUSPENDED'))
 );
+-- Una sola fila: el índice compara la expresión constante TRUE
 CREATE UNIQUE INDEX uk_platform_singleton ON platform ((TRUE));
 
 -- ---------------------------------------------------------------------
--- 3. servicios (Sprint 1): catálogo
+-- 3. servicios (Sprint 1: V5): catálogo de servicios
 -- ---------------------------------------------------------------------
 CREATE TABLE servicios (
     id               UUID          NOT NULL,
-    nombre           VARCHAR(150)  NOT NULL,                           -- SPRINT1-ASUNCIÓN
+    nombre           VARCHAR(150)  NOT NULL,
     descripcion      VARCHAR(500),
-    categoria        VARCHAR(100)  NOT NULL,                           -- SPRINT1-ASUNCIÓN
+    categoria        VARCHAR(100)  NOT NULL,
     duracion_minutos INTEGER       NOT NULL,
     precio           NUMERIC(12,2) NOT NULL,
-    estado           VARCHAR(20)   NOT NULL,
-    created_at       TIMESTAMPTZ   NOT NULL DEFAULT now(),             -- SPRINT1-ASUNCIÓN
-    updated_at       TIMESTAMPTZ   NOT NULL DEFAULT now(),             -- SPRINT1-ASUNCIÓN
+    estado           VARCHAR(20)   NOT NULL,                           -- VERIFICAR longitud en V5
+    created_at       TIMESTAMPTZ   NOT NULL,
+    updated_at       TIMESTAMPTZ   NOT NULL,
     CONSTRAINT pk_servicios PRIMARY KEY (id),
     CONSTRAINT ck_servicios_duracion
         CHECK (duracion_minutos > 0 AND duracion_minutos <= 480),
     CONSTRAINT ck_servicios_precio CHECK (precio > 0),
     CONSTRAINT ck_servicios_estado CHECK (estado IN ('ACTIVO', 'INACTIVO'))
 );
+-- Nombre único sin distinguir mayúsculas/minúsculas
 CREATE UNIQUE INDEX uk_servicios_nombre ON servicios (lower(nombre));
 
 -- ---------------------------------------------------------------------
--- 4. profesionales (Sprint 1): perfil que extiende a app_user (1:0..1)
+-- 4. profesionales (Sprint 1: V6): perfil que extiende a app_user (1:0..1)
 -- ---------------------------------------------------------------------
 CREATE TABLE profesionales (
     id           UUID         NOT NULL,
     rol          VARCHAR(30)  NOT NULL DEFAULT 'PROFESSIONAL',
-    especialidad VARCHAR(150) NOT NULL,                                -- SPRINT1-ASUNCIÓN
-    created_at   TIMESTAMPTZ  NOT NULL DEFAULT now(),                  -- SPRINT1-ASUNCIÓN
-    updated_at   TIMESTAMPTZ  NOT NULL DEFAULT now(),                  -- SPRINT1-ASUNCIÓN
+    especialidad VARCHAR(100) NOT NULL,
+    created_at   TIMESTAMPTZ  NOT NULL,
+    updated_at   TIMESTAMPTZ  NOT NULL,
     CONSTRAINT pk_profesionales PRIMARY KEY (id),
     CONSTRAINT ck_profesionales_rol CHECK (rol = 'PROFESSIONAL'),
-    CONSTRAINT fk_profesionales_app_user FOREIGN KEY (id, rol)
+    CONSTRAINT ck_profesionales_especialidad
+        CHECK (length(btrim(especialidad)) > 0),
+    -- FK compuesta: solo cuentas con role = 'PROFESSIONAL' pueden tener perfil
+    CONSTRAINT fk_profesionales_app_user_rol FOREIGN KEY (id, rol)
         REFERENCES app_user (id, role)
 );
 
