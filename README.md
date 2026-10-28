@@ -822,119 +822,119 @@ WHERE table_schema = 'public'
 ORDER BY table_name;
 ```
 
-<img src="evidencias/00-tablas-creadas.png" alt="Evidencia: tablas creadas por schema.sql" width="800">
+<img src="evidencias/00-tablas-creadas.jpg" alt="Evidencia: tablas creadas por schema.sql" width="800">
 
 #### Consultas del Sprint 1
 
 **S1-1.** ¿Existe una cuenta con un correo determinado?
 
-<img src="evidencias/S1-01.png" alt="Evidencia S1-1" width="800">
+<img src="evidencias/S1-01.jpg" alt="Evidencia S1-1" width="800">
 
 **S1-2.** ¿Cuántas cuentas existen por rol?
 
-<img src="evidencias/S1-02.png" alt="Evidencia S1-2" width="800">
+<img src="evidencias/S1-02.jpg" alt="Evidencia S1-2" width="800">
 
 **S1-3.** ¿Qué cuentas están bloqueadas actualmente?
 
-<img src="evidencias/S1-03.png" alt="Evidencia S1-3" width="800">
+<img src="evidencias/S1-03.jpg" alt="Evidencia S1-3" width="800">
 
 **S1-4.** ¿Qué cuentas acumulan más intentos fallidos?
 
-<img src="evidencias/S1-04.png" alt="Evidencia S1-4" width="800">
+<img src="evidencias/S1-04.jpg" alt="Evidencia S1-4" width="800">
 
 **S1-5.** ¿Cuántas cuentas se registraron por día?
 
-<img src="evidencias/S1-05.png" alt="Evidencia S1-5" width="800">
+<img src="evidencias/S1-05.jpg" alt="Evidencia S1-5" width="800">
 
 **S1-6.** ¿Qué porcentaje de cuentas está habilitado?
 
-<img src="evidencias/S1-06.png" alt="Evidencia S1-6" width="800">
+<img src="evidencias/S1-06.jpg" alt="Evidencia S1-6" width="800">
 
 **S1-7.** ¿Qué servicios activos existen por categoría?
 
-<img src="evidencias/S1-07.png" alt="Evidencia S1-7" width="800">
+<img src="evidencias/S1-07.jpg" alt="Evidencia S1-7" width="800">
 
 **S1-8.** ¿Qué servicios requieren más tiempo de atención?
 
-<img src="evidencias/S1-08.png" alt="Evidencia S1-8" width="800">
+<img src="evidencias/S1-08.jpg" alt="Evidencia S1-8" width="800">
 
 **S1-9.** ¿Cuántos profesionales hay por especialidad?
 
-<img src="evidencias/S1-09.png" alt="Evidencia S1-9" width="800">
+<img src="evidencias/S1-09.jpg" alt="Evidencia S1-9" width="800">
 
 **S1-10.** ¿Qué profesionales están habilitados y con qué especialidad?
 
-<img src="evidencias/S1-10.png" alt="Evidencia S1-10" width="800">
+<img src="evidencias/S1-10.jpg" alt="Evidencia S1-10" width="800">
 
 **S1-11.** ¿Qué especialidades no tienen ningún servicio activo en el catálogo?
 
-<img src="evidencias/S1-11.png" alt="Evidencia S1-11" width="800">
+<img src="evidencias/S1-11.jpg" alt="Evidencia S1-11" width="800">
 
 **S1-12.** Consistencia: ¿hay cuentas `PROFESSIONAL` sin perfil?
 
-<img src="evidencias/S1-12.png" alt="Evidencia S1-12" width="800">
+<img src="evidencias/S1-12.jpg" alt="Evidencia S1-12" width="800">
 
 #### Consultas del Sprint 2
 
 **S2-1.** ¿Cuál es el horario semanal de un profesional?
 
-<img src="evidencias/S2-01.png" alt="Evidencia S2-1" width="800">
+<img src="evidencias/S2-01.jpg" alt="Evidencia S2-1" width="800">
 
 **S2-2.** ¿Qué servicios activos ofrece un profesional?
 
-<img src="evidencias/S2-02.png" alt="Evidencia S2-2" width="800">
+<img src="evidencias/S2-02.jpg" alt="Evidencia S2-2" width="800">
 
 **S2-3.** ¿Qué franjas libres tiene un profesional para un servicio en una fecha?
 
-<img src="evidencias/S2-03.png" alt="Evidencia S2-3" width="800">
+<img src="evidencias/S2-03.jpg" alt="Evidencia S2-3" width="800">
 
 **S2-4.** ¿Qué reservas confirmadas tiene un cliente?
 
-<img src="evidencias/S2-04.png" alt="Evidencia S2-4" width="800">
+<img src="evidencias/S2-04.jpg" alt="Evidencia S2-4" width="800">
 
 **S2-5.** ¿Cuántas reservas hay por estado?
 
-<img src="evidencias/S2-05.png" alt="Evidencia S2-5" width="800">
+<img src="evidencias/S2-05.jpg" alt="Evidencia S2-5" width="800">
 
 **S2-6.** ¿Qué profesionales acumulan cancelaciones desde una fecha?
 
-<img src="evidencias/S2-06.png" alt="Evidencia S2-6" width="800">
+<img src="evidencias/S2-06.jpg" alt="Evidencia S2-6" width="800">
 
 **S2-7.** ¿Cuántas reservas completadas e ingresos genera cada servicio?
 
-<img src="evidencias/S2-07.png" alt="Evidencia S2-7" width="800">
+<img src="evidencias/S2-07.jpg" alt="Evidencia S2-7" width="800">
 
 **S2-8.** ¿Qué correos de notificación están pendientes o fallaron?
 
-<img src="evidencias/S2-08.png" alt="Evidencia S2-8" width="800">
+<img src="evidencias/S2-08.jpg" alt="Evidencia S2-8" width="800">
 
 **S2-9.** ¿Qué acciones críticas se registraron en un rango de fechas y quién las hizo?
 
-<img src="evidencias/S2-09.png" alt="Evidencia S2-9" width="800">
+<img src="evidencias/S2-09.jpg" alt="Evidencia S2-9" width="800">
 
 **S2-10.** ¿Cuántas veces ocurrió cada tipo de acción en la bitácora?
 
-<img src="evidencias/S2-10.png" alt="Evidencia S2-10" width="800">
+<img src="evidencias/S2-10.jpg" alt="Evidencia S2-10" width="800">
 
 **S2-11.** ¿Qué administradores aún no tienen MFA activo?
 
-<img src="evidencias/S2-11.png" alt="Evidencia S2-11" width="800">
+<img src="evidencias/S2-11.jpg" alt="Evidencia S2-11" width="800">
 
 **S2-12.** ¿Cuántos códigos de recuperación sin usar tiene cada administrador?
 
-<img src="evidencias/S2-12.png" alt="Evidencia S2-12" width="800">
+<img src="evidencias/S2-12.jpg" alt="Evidencia S2-12" width="800">
 
 **S2-13.** ¿Qué profesionales no han configurado su horario?
 
-<img src="evidencias/S2-13.png" alt="Evidencia S2-13" width="800">
+<img src="evidencias/S2-13.jpg" alt="Evidencia S2-13" width="800">
 
 **S2-14.** ¿Qué notificaciones generó una reserva?
 
-<img src="evidencias/S2-14.png" alt="Evidencia S2-14" width="800">
+<img src="evidencias/S2-14.jpg" alt="Evidencia S2-14" width="800">
 
 **S2-15.** ¿Cuántas entregas hay por tipo de evento y estado?
 
-<img src="evidencias/S2-15.png" alt="Evidencia S2-15" width="800">
+<img src="evidencias/S2-15.jpg" alt="Evidencia S2-15" width="800">
 
 ---
 
